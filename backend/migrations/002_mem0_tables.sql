@@ -1,0 +1,1 @@
+-- Tables dédiées aux mémoires Mem0
