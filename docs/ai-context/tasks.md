@@ -1,32 +1,47 @@
-# Tâches et progrès
+# Tâches et progrès — Projet Jarvis
 
-## État actuel
+## 🎯 Sprint 1 — Sécuriser l'API (Statut : ✅ 100% Terminé)
 
-- [x] Mettre en place le squelette FastAPI et Next.js.
-- [x] Intégrer Mem0 avec pgvector.
-- [x] Ajouter le bot Telegram texte.
-- [x] Ajouter les migrations SQL et l’activation initiale de RLS.
-- [x] Ajouter l’interface de chat Web.
-- [x] Ajouter l’agent LangChain et ses outils métier.
-- [x] Ajouter les six fichiers de contexte IA.
+### ✅ Terminé
 
-## Priorité 0 — Sécuriser l’API
+- [x] Authentification Supabase (`get_current_user`, JWT HS256).
+- [x] Configuration : `JARVIS_USER_ID` supprimé, `SUPABASE_JWT_SECRET` ajouté.
+- [x] Protection de `chat.py`, `jobs.py`, `voice.py`, `agents.py`, `memory.py`.
+- [x] Propagation du `user_id` via `ContextVar` dans l’agent LangChain.
+- [x] Migration `005` : ajout de `opportunities.user_id` (nullable).
+- [x] Masquage des erreurs dans `chat.py` (logger + message générique).
+- [x] Frontend `api.ts` : injection du header `Authorization: Bearer <token>`.
 
-- [~] Ajouter une authentification Supabase obligatoire sur tous les endpoints HTTP.
-- [ ] Remplacer `JARVIS_USER_ID` fixe par l’identité authentifiée de la requête.
-- [ ] Isoler toutes les lectures et écritures par `user_id` authentifié.
-- [ ] Définir les politiques RLS explicites pour chaque table.
-- [ ] Vérifier et rendre obligatoire la restriction `TELEGRAM_ALLOWED_USER_ID`.
-- [ ] Remplacer l’exposition de `str(e)` par des messages génériques côté client et des logs serveur contrôlés.
-- [ ] Vérifier qu’aucun secret n’est exposé dans les réponses ou les logs.
+## 🎯 Sprint 1.5 — Finalisation Sécurité (Statut : ✅ Terminé)
 
-## Priorité 1 — Chat conversationnel
+### ✅ Terminé
 
-- [ ] Charger l’historique correspondant à `conversation_id` avant l’appel de l’agent.
-- [ ] Convertir l’historique persisté en messages LangChain.
-- [ ] Ajouter une limite de taille du contexte et une stratégie de résumé.
-- [ ] Gérer proprement les erreurs et les statuts de traitement du chat.
-- [ ] Vérifier la persistance cohérente des messages utilisateur et assistant.
+- [x] **Migration `006`** : backfill des `user_id` NULL dans `opportunities` et passage en `NOT NULL`.
+- [x] **Migration `007`** : activation RLS sur `chat_history`, `knowledge_base`, `user_facts`, `job_applications`, `courses`, `opportunities`, avec politiques `auth.uid() = user_id`.
+- [x] **Telegram** : `TELEGRAM_ALLOWED_USER_ID` obligatoire et validé au démarrage (`gt=0`).
+- [x] **Validation Python** : `ast.parse` OK sur 7 fichiers.
+- [x] **Validation sécurité** : aucune occurrence de `JARVIS_USER_ID` ni `detail=str(e)` dans `backend/`.
+
+### 🚧 Blocage actuel
+
+- [ ] **Frontend Lint** : l’installation de npm a échoué, bloquée sous OneDrive. Les dépendances ne sont pas installées (`node_modules` absent) et le lint TypeScript n’a pas pu être exécuté.
+
+## 💬 Sprint 2 — Chat Conversationnel (Statut : ✅ Terminé)
+
+### ✅ Terminé
+
+- [x] Conversion Supabase vers LangChain (`to_langchain_messages` dans `core.py`).
+- [x] Chargement de l’historique dans `chat.py` : 10 derniers messages filtrés par `conversation_id` et `user_id`.
+- [x] Inversion chronologique avec `reversed()`.
+- [x] Appel de `ask_jarvis(..., history=history)` avec typage `list[BaseMessage]`.
+- [x] Persistance vérifiée : les insertions Supabase contrôlent explicitement les erreurs avec `if response.error`.
+
+### 🚧 À faire — Tests et validation
+
+- [ ] Tests HTTP : requête sans token → `401`, avec token → `200`.
+- [ ] Test d’isolation entre deux utilisateurs.
+- [ ] Gestion des notes vocales Telegram.
+- [ ] Résolution du blocage `npm install` et exécution du lint frontend.
 
 ## Priorité 2 — Voix
 
@@ -37,7 +52,7 @@
 - [ ] Remplacer le statut vocal fictif par une vérification réelle de configuration et de disponibilité.
 - [ ] Implémenter ou replanifier explicitement le streaming ElevenLabs WebRTC.
 
-## Priorité 3 — Qualité & exploitation
+## Priorité 3 — Qualité et exploitation
 
 - [ ] Ajouter des tests backend pour `/health`, `/api/chat`, `/api/memory` et les autres routeurs.
 - [ ] Ajouter des tests pour les outils de l’agent et le filtrage Telegram.
@@ -52,5 +67,5 @@
 
 ## Vérification
 
-- Dernière mise à jour : 2026-09-21 — audit technique initial.
+- Dernière mise à jour : 2026-09-21 — Sprint 1.5 et Sprint 2 implémentés, validations restantes documentées.
 - Responsable : [À REMPLIR]

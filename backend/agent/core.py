@@ -1,5 +1,8 @@
+from collections.abc import Mapping
+
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from config import settings
@@ -28,7 +31,31 @@ prompt = ChatPromptTemplate.from_messages([
 agent = create_openai_tools_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-async def ask_jarvis(user_message: str, user_id: str, history: list = None) -> str:
+def to_langchain_messages(
+    rows: list[Mapping[str, object]],
+) -> list[BaseMessage]:
+    messages: list[BaseMessage] = []
+
+    for row in rows:
+        sender = row.get("sender")
+        content = row.get("content")
+
+        if not isinstance(content, str) or not content:
+            continue
+
+        if sender == "user":
+            messages.append(HumanMessage(content=content))
+        elif sender == "assistant":
+            messages.append(AIMessage(content=content))
+
+    return messages
+
+
+async def ask_jarvis(
+    user_message: str,
+    user_id: str,
+    history: list[BaseMessage] | None = None,
+) -> str:
     token = current_user_id.set(user_id)
     try:
         result = await agent_executor.ainvoke({

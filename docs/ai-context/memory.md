@@ -59,3 +59,52 @@
 ### Conclusion de l’audit
 
 Jarvis dispose d’une bonne base d’architecture, mais n’est pas prêt pour la production. La priorité est de sécuriser l’API, d’assurer l’isolation par utilisateur et de compléter les politiques RLS avant toute exposition publique ou utilisation multi-utilisateur.
+
+## 2026-09-21 — Finalisation sécurité et chat conversationnel
+
+- Les routeurs `jobs`, `voice`, `agents` et `memory` exigent désormais un JWT Supabase valide.
+- Les candidatures sont filtrées par `user_id` authentifié.
+- `TELEGRAM_ALLOWED_USER_ID` est obligatoire et doit être strictement positif au démarrage.
+- `005_opportunities_user_id.sql` ajoute la colonne propriétaire nullable et son index.
+- `006_opportunities_backfill.sql` attribue les opportunités historiques sans propriétaire au premier utilisateur Supabase créé, puis impose `NOT NULL`. Cette règle de secours doit être contrôlée avant une exécution en production.
+- `007_rls_policies.sql` active la RLS et applique `auth.uid() = user_id` aux tables applicatives. La politique `memories` est créée uniquement si cette table et sa colonne `user_id` existent.
+- Le frontend transmet le JWT Supabase dans le header `Authorization`.
+- Le chat charge les 10 derniers messages de `chat_history`, filtrés par `conversation_id` et `user_id`, puis les convertit en `HumanMessage` et `AIMessage` dans l’ordre chronologique.
+- Les réponses Supabase sont vérifiées lors des insertions des messages utilisateur et assistant.
+
+## 2026-09-21 — Décisions base de données et chat conversationnel
+
+### Migration 006 — Backfill des opportunités
+
+- Les lignes `opportunities.user_id IS NULL` sont attribuées au premier utilisateur Supabase existant.
+- La migration échoue explicitement si aucun utilisateur Supabase n’existe.
+- La colonne `opportunities.user_id` passe en `NOT NULL` après le backfill.
+
+### Migration 007 — Politiques RLS
+
+- Les tables ciblées sont `chat_history`, `knowledge_base`, `user_facts`, `job_applications`, `courses` et `opportunities`.
+- Chaque table utilise `USING (auth.uid() = user_id)` et `WITH CHECK (auth.uid() = user_id)`.
+- La table `memories` n’est pas ciblée : elle n’existe pas dans les migrations visibles et Mem0 utilise une collection externe.
+
+### Chat conversationnel
+
+- L’historique est filtré simultanément par `conversation_id` et `user_id`.
+- Seuls les 10 derniers messages sont chargés.
+- La requête Supabase utilise `desc=True`, puis les résultats sont inversés avec `reversed()` pour rétablir l’ordre chronologique.
+- Les messages `user` sont convertis en `HumanMessage`.
+- Les messages `assistant` sont convertis en `AIMessage`.
+- Les messages `system` sont ignorés, car le prompt système est déjà défini dans l’agent.
+- Les insertions du message utilisateur et de la réponse assistant vérifient explicitement `response.error`.
+- Aucune transaction stricte n’est utilisée pour le MVP.
+
+### Blocage frontend
+
+- `npm.cmd install` reste bloqué sous OneDrive.
+- Le lint TypeScript n’a pas pu être exécuté.
+- La procédure recommandée est de fermer les terminaux et éditeurs utilisant `frontend/`, supprimer `node_modules` et `package-lock.json` s’ils existent, puis relancer :
+
+```powershell
+npm.cmd install --no-audit --no-fund --prefer-offline
+```
+
+- Si le blocage persiste, le dossier `frontend/` doit être copié temporairement vers `C:\Dev\jarvis-frontend\` afin d’y installer les dépendances et d’y lancer le lint.

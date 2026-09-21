@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     ELEVENLABS_VOICE_ID: str = Field("21m00Tcm4TlvDq8ikWAM", description="ID Voix")
 
     TELEGRAM_BOT_TOKEN: str = Field("", description="Token bot Telegram")
-    TELEGRAM_ALLOWED_USER_ID: int = Field(0, description="ID Telegram utilisateur autorisé")
+    TELEGRAM_ALLOWED_USER_ID: int = Field(
+        ...,
+        gt=0,
+        description="ID Telegram utilisateur autorisé",
+    )
 
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
