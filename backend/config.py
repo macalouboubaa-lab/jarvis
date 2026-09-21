@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = Field(..., description="URL Supabase")
     SUPABASE_SERVICE_KEY: str = Field(..., description="Clé secrète service_role")
     SUPABASE_ANON_KEY: str = Field("", description="Clé anon")
+    SUPABASE_JWT_SECRET: str = Field(..., description="Secret de signature JWT Supabase")
     DATABASE_URL: str = Field(..., description="URL de connexion asyncpg")
 
     OPENAI_API_KEY: str = Field(..., description="Clé OpenAI")
@@ -18,7 +19,6 @@ class Settings(BaseSettings):
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
-    JARVIS_USER_ID: str = "00000000-0000-0000-0000-000000000001"
 
     model_config = SettingsConfigDict(
         env_file=".env",

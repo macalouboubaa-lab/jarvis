@@ -17,7 +17,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if settings.TELEGRAM_ALLOWED_USER_ID and user_id != settings.TELEGRAM_ALLOWED_USER_ID:
         return
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-    reply = await ask_jarvis(update.message.text)
+    reply = await ask_jarvis(
+        update.message.text,
+        user_id=str(settings.TELEGRAM_ALLOWED_USER_ID),
+    )
     await update.message.reply_text(reply)
 
 def run_bot():
