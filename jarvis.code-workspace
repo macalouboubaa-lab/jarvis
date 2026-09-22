@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "scent-style",
+			"path": "../../scent-style"
+		}
+	],
+	"settings": {}
+}
