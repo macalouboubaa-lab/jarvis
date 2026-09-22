@@ -108,3 +108,43 @@ npm.cmd install --no-audit --no-fund --prefer-offline
 ```
 
 - Si le blocage persiste, le dossier `frontend/` doit être copié temporairement vers `C:\Dev\jarvis-frontend\` afin d’y installer les dépendances et d’y lancer le lint.
+
+## 2026-09-22 — Organisation définitive du workspace et leçons Git
+
+### Emplacements
+
+- `C:\dev\jarvis-gitdir` contient une copie de sûreté du répertoire `.git`. Il ne doit pas être modifié.
+- `C:\dev\jarvis-repo` est le dépôt actif pour le backend, les migrations, la documentation, les commits et les pushs.
+- `C:\dev\jarvis-frontend` est le workspace frontend pour `npm`, le développement et les validations Next.js.
+- Le dépôt OneDrive est une sauvegarde passive du code source ; aucun Git actif ne doit y être utilisé.
+
+### Règles opérationnelles
+
+- Ne jamais lancer `npm`, `pnpm` ou `yarn` dans OneDrive.
+- En fin de session, synchroniser le frontend avec `Sync-Jarvis`, vérifier le dépôt actif, puis commiter et pousser depuis `C:\dev\jarvis-repo`.
+- Utiliser `git add` avec des fichiers explicitement contrôlés, jamais `git add -A` sans avoir vérifié `git status`.
+- Vérifier la synchronisation avec `git rev-list --left-right --count HEAD...origin/main`.
+- Avant un push, utiliser `git pull --rebase origin main` et ne jamais forcer le push sur `main`.
+- Vérifier qu’aucun `node_modules`, `.next`, `dist`, `build`, `out` ou `coverage` n’est synchronisé vers OneDrive.
+
+### `.gitignore` et commits
+
+- La règle générique `lib/` ignorait potentiellement `frontend/lib/`.
+- La règle correcte doit être ancrée à la racine :
+
+```gitignore
+/lib/
+/lib64/
+!frontend/lib/
+!frontend/lib/**
+```
+
+- Le format de commit attendu est `type(scope): description courte`, avec un corps expliquant le pourquoi si nécessaire.
+- Les types autorisés sont `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style` et `perf`.
+- Les commits décrivant uniquement une manipulation technique, comme une copie de contournement, ne respectent pas cette convention.
+
+### État de référence au 2026-09-22
+
+- Sprints 1, 1.5 et 2 terminés.
+- Tâches ouvertes : tests HTTP, test d’isolation multi-utilisateur, lint frontend, intégration vocale Telegram et complétion de `design.md` et `règles.md`.
+- Commits poussés : `5835c1d` et `c391ae6`.
