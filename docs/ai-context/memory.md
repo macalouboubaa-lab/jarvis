@@ -127,6 +127,16 @@ npm.cmd install --no-audit --no-fund --prefer-offline
 - Avant un push, utiliser `git pull --rebase origin main` et ne jamais forcer le push sur `main`.
 - Vérifier qu’aucun `node_modules`, `.next`, `dist`, `build`, `out` ou `coverage` n’est synchronisé vers OneDrive.
 
+## 2026-10-21 — Audit technique
+
+- Les routes métier appliquent des filtres `user_id`, mais le client Supabase backend utilise `SUPABASE_SERVICE_KEY`, qui contourne les politiques RLS : l’isolation dépend donc de chaque chemin applicatif.
+- Risque multi-utilisateur confirmé pour les cours : `courses.name` est globalement `UNIQUE` et l’outil fait `upsert(..., on_conflict="name")`; un conflit peut remplacer le `user_id` de la ligne existante.
+- `docker-compose.yml` contient des mots de passe par défaut et publie les ports PostgreSQL/n8n ; ne pas exposer cette configuration telle quelle.
+- Le statut voix est constant et le bouton micro du frontend enregistre sans envoyer ni transcrire le média. Les fonctionnalités voix annoncées ne sont pas complètes.
+- `AgentExecutor` est configuré avec `verbose=True`; les outils renvoient les exceptions sous forme de chaîne. Examiner les risques de journalisation et d’exposition d’informations.
+- Aucun test, CI, Dockerfile ou lockfile n’a été trouvé. Les dépendances sont épinglées seulement côté Python ; l’audit CVE n’a pas pu s’exécuter faute de `pip-audit`, Node et npm dans l’environnement.
+- Priorités de correction consignées dans `tasks.md` : sécuriser Compose et l’upsert cross-user avant exposition publique, puis tests d’isolation, protections contre les abus et fiabilisation des intégrations.
+
 ### `.gitignore` et commits
 
 - La règle générique `lib/` ignorait potentiellement `frontend/lib/`.

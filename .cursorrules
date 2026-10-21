@@ -1,0 +1,128 @@
+# .cursorrules — JARVIS
+# Règles strictes pour agents IA (Cursor, Claude Code, Windsurf)
+# Version: 1.0 | Dernière mise à jour: 2026-10-21
+# Ce fichier est contractuel. Signaler tout conflit à l'humain avant d'agir.
+
+## IDENTITÉ DU PROJET
+
+Nom : JARVIS
+Type : Assistant personnel IA (Web + Telegram)
+Statut : Pré-production — ne pas exposer publiquement
+Audit de référence : 3,7/10 — deux risques P0 ouverts :
+upsert cross-user et configuration Docker Compose non sécurisée.
+
+### Stack imposée
+
+- Backend : Python 3.11+, FastAPI, SQLAlchemy, Pydantic v2
+- Frontend : Next.js 14+ App Router, TypeScript strict, React 18+
+- Base : PostgreSQL 16, pgvector et Supabase
+- IA : OpenAI, Mem0 ; ElevenLabs prévu, voix non implémentée
+- Bot : python-telegram-bot
+- Infra : Docker Compose et GitHub Actions
+- Tests : pytest backend ; Vitest frontend à mettre en place
+
+Ne pas introduire sans validation humaine explicite :
+- un nouveau framework ou une nouvelle base de données ;
+- un nouveau service cloud payant ;
+- un changement de version majeure de Python ou Node.
+
+## ARCHITECTURE
+
+Respecter les responsabilités et le flux :
+routers → agent → services → accès aux données.
+
+Correspondance avec la structure existante :
+- HTTP : backend/routers/
+- Agent et outils : backend/agent/
+- Intégrations : backend/services/
+- Accès Supabase/SQLAlchemy : backend/database.py
+- Mémoire : backend/memory/
+
+Ne pas créer, déplacer ou renommer ces modules pour imposer une autre
+arborescence sans validation humaine. Les migrations restent dans
+backend/migrations/ et sont append-only.
+
+## CONVENTIONS DE CODE
+
+### Python
+- Nommage snake_case, classes PascalCase, constantes UPPER_SNAKE_CASE.
+- Type hints obligatoires pour les paramètres et retours des fonctions publiques.
+- Docstrings Google style pour les fonctions publiques.
+- Pas de print() : utiliser logging.getLogger(__name__).
+- Pas de except nu ; spécifier les exceptions.
+- Longueur de ligne : 100 caractères.
+- Imports ordonnés stdlib, tiers, local.
+
+### TypeScript / React
+- Strict mode ; éviter any, préférer unknown et des type guards.
+- Composants PascalCase.tsx dans components/.
+- Hooks personnalisés useXxx.ts dans hooks/.
+- Pas de console.log en production.
+- Employer import type pour les types purs.
+
+### SQL
+- Migrations numérotées NNN_description.sql, append-only.
+- Noms snake_case et tables au pluriel.
+- Rendre les migrations idempotentes quand c'est possible.
+- Toute nouvelle table portant user_id doit avoir une policy RLS dans la même PR.
+
+## RÈGLES DE MODIFICATION
+
+- Ne jamais supprimer ni réécrire du code existant sans confirmation explicite.
+- Ne jamais modifier une migration existante ; ajouter une nouvelle migration.
+- Ne modifier aucun fichier métier hors du périmètre explicitement demandé.
+- Signaler les conflits entre cette directive, le code présent et la demande avant d'agir.
+- Après chaque modification, lancer pytest, ruff et npm test lorsqu'ils sont disponibles.
+  Si une commande manque ou échoue, le signaler clairement.
+- Toute nouvelle variable d'environnement doit être documentée dans .env.example.
+- Aucun secret en dur : utiliser l'environnement et les fichiers .env ignorés par Git.
+- Format des commits : Conventional Commits.
+
+## SÉCURITÉ — CHECKLIST PAR CHANGEMENT
+
+| Si tu ajoutes… | Tu dois aussi… |
+|---|---|
+| Une route API | Ajouter l'auth JWT et un test test_<route>_requires_auth |
+| Une route lisant des données utilisateur | Ajouter un test d'isolation A/B |
+| Une table | Ajouter sa policy RLS dans la même PR et une migration |
+| Un appel externe | Ajouter timeout, gestion d'erreur et log expurgé |
+| Un outil agent | Ajouter retour typé, validation des entrées et test |
+| Une variable d'environnement | L'ajouter à .env.example avec commentaire |
+| Un service | Le documenter dans README.md, section Services |
+
+Le backend utilise une clé Supabase service_role qui contourne la RLS.
+Ne pas considérer la RLS comme substitut aux filtres user_id dans l'application.
+
+## RÈGLES SPÉCIFIQUES À L'AGENT JARVIS
+
+1. Versionner les changements de prompt système et leur changelog.
+   Le dépôt utilise actuellement backend/agent/prompts.py ; ne pas déplacer
+   ce fichier sans validation humaine.
+2. Tout nouvel outil appelant OpenAI doit limiter max_tokens et définir un timeout.
+   Documenter l'estimation de coût dans la PR ou la documentation.
+3. AgentExecutor(verbose=True) est interdit en production. Ne jamais journaliser
+   le contenu complet des messages utilisateur.
+4. Ne jamais renvoyer str(e) au modèle. Retourner un message générique et
+   journaliser l'exception côté serveur sans données sensibles.
+5. /api/voice/status ne doit pas annoncer « ready » si ElevenLabs n'est pas
+   configuré et disponible.
+6. Chaque accès Mem0 doit inclure un user_id explicite ; aucune mémoire globale.
+
+## STRATÉGIE DE TESTS
+
+### Pyramide
+- Unitaires : logique pure, outils et services.
+- Intégration : TestClient, routes, authentification et isolation.
+- E2E : parcours critiques uniquement.
+
+### Seuils
+- Couverture globale minimale : 60 %, puis progression vers 80 %.
+- backend/services/ : 80 %.
+- Chaque route doit avoir au moins un test.
+
+Ne pas prétendre qu'un seuil est atteint si la suite de tests ne le démontre pas.
+Le smoke test seul ne constitue pas une couverture métier.
+
+### Nommage
+Utiliser test_<action>_<condition>_<résultat_attendu>, par exemple :
+test_create_course_same_name_different_users_creates_two_rows

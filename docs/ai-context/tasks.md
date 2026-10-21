@@ -69,3 +69,24 @@
 
 - Dernière mise à jour : 2026-09-21 — Sprint 1.5 et Sprint 2 implémentés, validations restantes documentées.
 - Responsable : [À REMPLIR]
+
+## Audit technique — 2026-10-21
+
+### Priorité P0 — avant toute exposition publique
+
+- [ ] Supprimer les mots de passe codés en dur dans `docker-compose.yml` et ne pas publier PostgreSQL/n8n sans authentification et filtrage réseau adaptés.
+- [ ] Corriger l’upsert des cours : la contrainte globale `courses.name UNIQUE` et `ON CONFLICT (name)` peuvent transférer une ligne d’un utilisateur à un autre avec la clé `service_role`.
+- [ ] Ajouter des tests d’authentification et d’isolation multi-utilisateur, notamment sur les outils agent et les conflits d’upsert.
+
+### Priorité P1 — robustesse et exploitation
+
+- [ ] Remplacer les réponses vocales fictives et implémenter le cycle audio de bout en bout (capture, transfert, transcription et synthèse selon les fonctionnalités annoncées).
+- [ ] Ajouter des limites de débit, limites de taille/durée d’entrée et timeouts pour les appels externes coûteux.
+- [ ] Éviter les appels Supabase synchrones dans les routes async ou les exécuter hors boucle d’événements.
+- [ ] Désactiver `AgentExecutor(verbose=True)` en production et éviter de retourner les exceptions d’outils au modèle/utilisateur.
+- [ ] Ajouter CI, tests backend/frontend/migrations, verrouillage des dépendances et scans CVE reproductibles.
+
+### Constat de validation
+
+- Aucun fichier de test, workflow CI, Dockerfile ni lockfile de dépendances n’a été trouvé lors de l’audit.
+- Le scanner `pip-audit` et Node/npm ne sont pas disponibles dans l’environnement d’audit ; les CVE n’ont donc pas été vérifiées.
