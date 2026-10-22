@@ -1,32 +1,119 @@
-version: '3.8'
+# ============================================================
+# docker-compose.yml — JARVIS (architecture A-cloud)
+# ============================================================
+# Services par défaut : backend, frontend, n8n
+#   → backend pointe vers Supabase (DATABASE_URL)
+# Profil "test" : ajoute postgres local pour pytest
+#   → docker compose --profile test up -d postgres
+# ============================================================
 
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: jarvis-postgres
-    restart: always
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jarvis-backend
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: jarvis_password
-      POSTGRES_DB: jarvis
+      # App runtime → Supabase
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL obligatoire (Supabase)}
+      # Tests (utile si on lance pytest dans le conteneur)
+      TEST_DATABASE_URL: ${TEST_DATABASE_URL:-}
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL obligatoire}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY obligatoire}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:?SUPABASE_SERVICE_KEY obligatoire}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?SUPABASE_JWT_SECRET obligatoire}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY obligatoire}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      MEM0_API_KEY: ${MEM0_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_USER_ID: ${TELEGRAM_ALLOWED_USER_ID:-}
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:?BACKEND_CORS_ORIGINS obligatoire}
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - jarvis_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: jarvis-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - jarvis_net
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.60.0
     container_name: jarvis-n8n
-    restart: always
-    ports:
-      - "5678:5678"
     environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=jarvis_n8n_password
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:?N8N_PASSWORD obligatoire}
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: Europe/Paris
+    ports:
+      - "127.0.0.1:5678:5678"
     volumes:
       - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    networks:
+      - jarvis_net
+
+  # ============================================================
+  # POSTGRES LOCAL — Tests uniquement (profil "test")
+  # Ne JAMAIS lancer en prod. Ne JAMAIS pointer DATABASE_URL dessus.
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: jarvis-postgres-test
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_TEST_USER:-jarvis}
+      POSTGRES_PASSWORD: ${POSTGRES_TEST_PASSWORD:?POSTGRES_TEST_PASSWORD obligatoire pour profil test}
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-jarvis_test}
+    ports:
+      - "127.0.0.1:5433:5432"   # ⚠️ 5433 côté host pour éviter conflit
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_TEST_USER:-jarvis} -d ${POSTGRES_TEST_DB:-jarvis_test}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - jarvis_net
 
 volumes:
-  pgdata:
   n8n_data:
+    name: jarvis_n8n_data
+  postgres_test_data:
+    name: jarvis_postgres_test_data
+
+networks:
+  jarvis_net:
+    name: jarvis_net
+    driver: bridge

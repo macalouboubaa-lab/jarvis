@@ -1,10 +1,17 @@
-# Environnement & Secrets
+# ============================================================
+# .gitignore — JARVIS
+# ============================================================
+
+# --- Environnement & Secrets ---
 .env
-.env.local
+.env.*
+!.env.example
 *.env
 *.pem
+*.key
+secrets/
 
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,25 +36,43 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 .venv
 venv/
 ENV/
 
-# Node / Next.js
+# --- Node / Next.js ---
 frontend/node_modules/
 frontend/.next/
 frontend/out/
 frontend/build/
+frontend/.turbo/
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
 .npm
 .yarn/
+npm-debug.log*
+yarn-debug.log*
 *.log
 
-# Système & IDE
+# --- Docker ---
+docker-compose.override.yml
+data/
+
+# --- Système & IDE ---
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.swp
 *.swo
