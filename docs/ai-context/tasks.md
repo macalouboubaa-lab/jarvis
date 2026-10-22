@@ -90,3 +90,89 @@
 
 - Aucun fichier de test, workflow CI, Dockerfile ni lockfile de dépendances n’a été trouvé lors de l’audit.
 - Le scanner `pip-audit` et Node/npm ne sont pas disponibles dans l’environnement d’audit ; les CVE n’ont donc pas été vérifiées.
+
+## 2026-10-22 — Rebuild du devcontainer
+
+- [x] Vérifier que `.devcontainer/devcontainer.json` est du JSON valide.
+- [ ] Rebuild du devcontainer sans cache depuis VS Code.
+- [ ] Après rebuild, vérifier que le conteneur utilise l’image Ubuntu attendue et que `CapEff` est non nul.
+- [ ] Vérifier l’accès à Docker et lancer `docker compose up --build backend`.
+
+### Blocage constaté
+
+- La session actuelle tourne encore sous Alpine (`/etc/os-release`), avec `CapEff=0000000000000000`.
+- Aucun binaire `docker`, socket `/var/run/docker.sock` ou outil CLI VS Code utilisable pour reconstruire le devcontainer n’est disponible dans cette session.
+- Le rebuild et le lancement Compose doivent être effectués depuis VS Code après réouverture/reconnexion au conteneur.
+
+## 2026-10-22 — Décision : Docker abandonné dans Codespaces
+
+### Problème
+
+- Codespaces free tier bloque `--privileged` (`CapEff: 0`).
+- Alpine est incompatible avec la feature `docker-in-docker:2`.
+- Le rebuild tente Ubuntu, mais reste sur Alpine (fallback).
+
+### Décision
+
+- ✅ Plan B : lancer l'app en direct (`uvicorn` + `next dev`) dans Codespaces.
+- ✅ Dockerfiles et Compose conservés pour CI (Jour 4) et production.
+- ⏸️ Tests Docker en local à faire avec Docker Desktop si besoin.
+
+### Ce qui n'est PAS affecté
+
+- Le code applicatif : aucune modification.
+- Le Compose A-cloud : toujours valide (`config --quiet` passe).
+- Les Dockerfiles : prêts pour la CI.
+- La décision Supabase-first : inchangée.
+
+### Prochaines étapes
+
+- [ ] Lancer le backend en direct (`uvicorn`).
+- [ ] Lancer le frontend en direct (`npm run dev`).
+- [ ] Ouvrir l'interface via les ports Codespaces.
+- [ ] Jour 3 (pre-commit) : à faire normalement.
+- [ ] Jour 4 (CI) : utiliser Docker Desktop en local pour tester, ou GitHub Actions*.
+
+## 2026-10-22 — Migration Next.js 15 : premier build réussi
+
+- [x] Installer Next.js 15, `eslint-config-next` 15, React 19, React DOM 19 et les types React 19.
+- [x] Mettre à jour `lucide-react` pour résoudre le conflit de peer dependencies React 19.
+- [x] Ajouter `frontend/app/not-found.tsx` et reconstruire après suppression du cache `.next`.
+- [x] `npm run build` passe sur Next.js 15.5.28 ; les routes statiques sont générées.
+- [ ] Valider `npm run dev` et l'interface dans le navigateur avant tout commit.
+- [ ] Examiner l'avertissement de racine workspace causé par plusieurs lockfiles.
+- [ ] Traiter les vulnérabilités rapportées par npm avant la validation de sécurité finale.
+
+### État des changements
+
+- Aucun commit créé.
+- `npm install` signale encore 11 vulnérabilités : 3 modérées et 8 hautes.
+- `next`, `react` et `react-dom` sont en 15.5.28, 19.3.1 et 19.3.1 ; les types React sont en 19.3.0.
+
+## 2026-10-22 — Migration Next.js 16
+
+- [x] Vérifier qu'aucune utilisation de `params`, `searchParams`, `cookies()` ou `headers()` n'est présente dans `frontend/app/`.
+- [x] Supprimer le lockfile racine orphelin (`package-lock.json` sans `package.json` racine).
+- [x] Migrer vers Next.js et `eslint-config-next` 16.4.2, React et React DOM 19.3.1.
+- [x] Installer ESLint 9 et configurer ESLint flat config ; remplacer `next lint` par `eslint .`.
+- [x] Ajouter la configuration PostCSS manquante pour que Tailwind soit traité sous Turbopack.
+- [x] `npm run build` passe sous Next.js 16.4.2 sans avertissements CSS.
+- [x] `npm audit --omit=dev` : 0 vulnérabilité.
+- [x] `npm run dev` répond HTTP 200 sur `/chat` au port 3001.
+- [ ] Vérification visuelle manuelle par l'utilisateur dans le navigateur.
+- [ ] Examiner les vulnérabilités des dépendances de développement et corriger les erreurs lint préexistantes sans modifier le code métier sans validation.
+
+### État des changements
+
+- Aucun commit créé.
+- `npm run lint` détecte 3 erreurs et 1 avertissement dans des fichiers métier existants ; ils n'ont pas été modifiés.
+- Next.js 16 a généré `frontend/AGENTS.md` automatiquement ; le fichier indique qu'il est réécrit par `next dev`.
+- Le serveur de développement reste démarré sur le port 3001 pour la vérification visuelle.
+
+## 2026-10-22 — Correctif d'hydratation et validation finale
+
+- [x] Ajouter `suppressHydrationWarning` sur l'horodatage dans `frontend/components/ChatBubble.tsx`.
+- [x] Rejouer `npm run build` sur Next.js 16.4.2 : succès.
+- [x] Rejouer `npm audit --omit=dev` : 0 vulnérabilité runtime.
+- [x] Vérification visuelle de l'interface effectuée par l'utilisateur.
+- [ ] Examiner séparément les vulnérabilités restantes dans les dépendances de développement.

@@ -158,3 +158,38 @@ npm.cmd install --no-audit --no-fund --prefer-offline
 - Sprints 1, 1.5 et 2 terminés.
 - Tâches ouvertes : tests HTTP, test d’isolation multi-utilisateur, lint frontend, intégration vocale Telegram et complétion de `design.md` et `règles.md`.
 - Commits poussés : `5835c1d` et `c391ae6`.
+
+## 2026-10-22 — État opérationnel du devcontainer
+
+- `.devcontainer/devcontainer.json` est lisible comme JSON strict et configure `mcr.microsoft.com/devcontainers/universal:2-linux`, Docker-in-Docker et `runArgs` privilégiés.
+- Malgré cette configuration, la session examinée fonctionne toujours sous Alpine et expose `CapEff=0000000000000000`.
+- La session ne dispose ni de la commande `docker`, ni de `/var/run/docker.sock`, ni d’un outil CLI VS Code permettant de lancer « Rebuild Without Cache ». Le rebuild doit être lancé depuis l’interface VS Code.
+- Après le rebuild, vérifier l’OS, `CapEff`, `docker info`, puis lancer `docker compose up --build backend`. Le fichier `.env` est présent ; ne pas afficher son contenu.
+
+## 2026-10-22 — Migration Next.js 15, build intermédiaire
+
+- La migration intermédiaire a installé Next.js et `eslint-config-next` 15.5.28, React et React DOM 19.3.1, `@types/react` et `@types/react-dom` 19.3.0.
+- `lucide-react` a été mis à jour de 0.395.0 à 1.61.0 pour résoudre son peer dependency React 19.
+- L’absence de `frontend/app/not-found.tsx` a été corrigée avec une page 404 minimale. Après suppression du cache `frontend/.next`, `npm run build` a réussi et généré les routes statiques.
+- Aucun commit n’a été créé. La vérification manuelle de l’interface avec `npm run dev` reste en attente.
+- npm signale 11 vulnérabilités (3 modérées, 8 hautes). Le build avertit aussi que plusieurs lockfiles existent et choisit la racine du dépôt ; à examiner avant migration finale.
+
+## 2026-10-22 — Migration Next.js 16.4.2
+
+- Next.js et `eslint-config-next` sont en 16.4.2 ; React et React DOM sont en 19.3.1. La compatibilité Next 16 a été vérifiée avec Node 24.18.1 (Next exige Node >=20.9).
+- Aucun usage de `params`, `searchParams`, `cookies()` ou `headers()` n'a été trouvé dans `frontend/app/`.
+- Le lockfile racine sans manifeste racine a été supprimé ; le lockfile frontend reste la référence.
+- `eslint-config-next` et ESLint sont configurés en dépendances de développement. ESLint 9 utilise la configuration flat ; le script lint appelle `eslint .`.
+- La configuration `frontend/postcss.config.mjs` active Tailwind 3 et Autoprefixer pour Turbopack. Le build Next 16 passe sans avertissements CSS.
+- `npm audit --omit=dev` rapporte 0 vulnérabilité. L'audit complet signale encore 9 vulnérabilités de développement (7 hautes et 2 modérées), notamment via ESLint/Tailwind.
+- `npm run lint` révèle 3 erreurs et 1 avertissement préexistants dans `app/chat/page.tsx`, `app/jobs/page.tsx`, `app/memory/page.tsx` et `components/ChatInput.tsx`. Aucun code métier n'a été modifié.
+- Le serveur Next 16 est actif sur le port 3001 ; `/chat` répond HTTP 200. La revue visuelle humaine reste à faire.
+- Next 16 a généré `frontend/AGENTS.md` au démarrage de `next dev`; son contenu précise qu'il est réécrit automatiquement.
+- Aucun commit n'a été créé.
+
+## 2026-10-22 — Correctif d'hydratation ChatBubble
+
+- L'utilisateur a validé visuellement l'interface après la migration et a signalé un décalage de locale/timezone dans l'heure de `ChatBubble`.
+- `suppressHydrationWarning` est appliqué au seul `<span>` qui affiche l'heure ; le contenu et le comportement métier ne changent pas.
+- Validation après correctif : `npm run build` réussi sous Next.js 16.4.2 et `npm audit --omit=dev` rapporte 0 vulnérabilité runtime.
+- L'audit complet des dépendances de développement reste distinct et signale encore des vulnérabilités ; le commit ne doit pas être décrit comme supprimant ces vulnérabilités de développement.

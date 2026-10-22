@@ -21,7 +21,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ sender, content, time })
           <span className={`text-xs font-semibold uppercase tracking-wider ${isAssistant ? "text-cyan-accent" : "text-violet-accent"}`}>
             {isAssistant ? "Jarvis" : "Vous"}
           </span>
-          {time && <span className="text-[10px] text-gray-400">{time}</span>}
+          {time && <span suppressHydrationWarning className="text-[10px] text-gray-400">{time}</span>}
         </div>
         <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
       </div>
